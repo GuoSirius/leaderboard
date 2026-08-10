@@ -12,10 +12,11 @@
   python run_daily.py --skip-bj         # 跳过北交所(新浪)补齐，跑得更快
 
 依赖:
-  - 虚拟环境 C:/Users/Admin/.workbuddy/binaries/python/envs/default
-    （需含 requests、mootdx；已预装）
+  - 运行本脚本的解释器需含 requests、mootdx、pandas
+    （推荐用本项目虚拟环境，或任何已装这些包的 python）
   - 网络：通达信 TCP(7709, mootdx)、东方财富、同花顺、新浪、腾讯
-  - 可用 PYTHON_BIN 环境变量覆盖解释器路径
+  - 解释器路径：默认用「运行本脚本的 python」(sys.executable)；
+    也可用 PYTHON_BIN 环境变量覆盖（CI / 多环境场景）
 
 输出:
   output/A股市场情绪日报_<YYYY-MM-DD>.html
@@ -26,10 +27,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
 SCRIPTS = os.path.join(ROOT, "scripts")
 OUTDIR = os.path.join(ROOT, "output")
-PY = os.environ.get(
-    "PYTHON_BIN",
-    r"C:/Users/Admin/.workbuddy/binaries/python/envs/default/Scripts/python.exe",
-)
+PY = os.environ.get("PYTHON_BIN", sys.executable)
 
 
 def log(*a):

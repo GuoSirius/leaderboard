@@ -20,7 +20,15 @@ def is_a_share(code, market):
 
 
 def main():
-    client = Quotes.factory(market="std")
+    # 防止通达信行情服务器(TCP 7709)在海外/CI 环境不可达时长时间挂起
+    import socket
+    socket.setdefaulttimeout(10)
+    try:
+        client = Quotes.factory(market="std")
+    except Exception as e:
+        print(f"[跳过] 通达信行情服务器不可达（CI/海外环境常见）：{e}", flush=True)
+        print("[跳过] 全市场行情序列将缺失；龙虎榜/题材/行业(HTTP源)仍正常生成。", flush=True)
+        return
     codes, seen = [], set()
     for mkt in (1, 0):
         df = client.stocks(market=mkt)
