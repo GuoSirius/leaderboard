@@ -92,29 +92,196 @@ Windows 用户可直接双击 `run_daily.bat`。
 
 ## 自动推送（微信 / 163 邮箱）
 
-报告生成后可自动推送。配置见 `notify_config.example.json`（复制为 `notify_config.json`）：
+报告生成后通过 `--notify` 自动推送。所有凭据只存于本机 `notify_config.json`（已被 `.gitignore` 忽略，不入库）或仓库环境变量，**绝不会写进脚本或 HTML**。
 
-- **个人微信**：通过 **Server酱（sct.ftqq.com）** 或 **PushPlus（pushplus.plus）**。用个人微信扫码关注其公众号，拿到 key/token（免费额度足够每日一份）。
-- **163 邮箱**：SMTP `smtp.163.com:465`（SSL），需在 163 邮箱设置中生成 **授权码**（不是登录密码）。
+### 第 1 步：准备配置文件
 
 ```bash
-python run_daily.py --notify          # 生成并推送
-python run_daily.py --only-report --notify --date 2026-07-24   # 先试推一次
+cp notify_config.example.json notify_config.json
 ```
 
-凭据仅存于本机 `notify_config.json`，不会进入脚本或报告。
+然后按要用的渠道编辑 `notify_config.json`。**原则：不用的渠道把对应对象留空 `{}` 即可关闭**，避免误报。
+
+### 第 2 步（任选其一或多选）：配置渠道
+
+#### A. 个人微信 · Server酱（免费，微信扫码即用）
+
+1. 打开 <https://sct.ftqq.com>，用**微信扫码**登录。
+2. 登录后在「Key」/「发送消息」处复制你的 **SendKey**（形如 `SCTxxxxxxxxxxxxxxxxxxxxxxxx`）。
+3. 微信关注 **「Server酱」** 服务号，推送会发到这里。
+4. 免费版每日 5 条额度，足够每天一份。
+
+`notify_config.json` 填法：
+
+```json
+{
+  "wechat": {
+    "provider": "serverchan",
+    "key": "SCTxxxxxxxxxxxxxxxxxxxxxxxx",
+    "token": ""
+  },
+  "email": {}
+}
+```
+
+#### B. 个人微信 · PushPlus（免费，额度更大）
+
+1. 打开 <https://www.pushplus.plus>，用**微信扫码**登录。
+2. 控制台首页复制你的 **token**（一对一推送）。
+3. 微信关注 **「PushPlus 推送加」** 公众号接收。
+4. 免费版每日 200 条额度。
+
+`notify_config.json` 填法：
+
+```json
+{
+  "wechat": {
+    "provider": "pushplus",
+    "key": "",
+    "token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  },
+  "email": {}
+}
+```
+
+#### C. 163 邮箱（SMTP）
+
+1. 浏览器登录 <https://mail.163.com> 网页版（**必须网页版**，客户端里找不到设置入口）。
+2. 右上角 **设置 → POP3/SMTP/IMAP**。
+3. 开启 **SMTP 服务（IMAP/SMTP 服务）**，按提示用绑定手机发短信验证。
+4. 验证后页面会显示一串 **16 位授权码**——**一次性显示，务必立即保存**。
+   ⚠️ 授权码 ≠ 登录密码，推送用的是授权码。
+5. `sender` 填你的 163 邮箱；`receiver` 填接收邮箱（163 / QQ / 企业邮箱均可，默认同 `sender`）。
+
+`notify_config.json` 填法：
+
+```json
+{
+  "wechat": {},
+  "email": {
+    "smtp_host": "smtp.163.com",
+    "smtp_port": 465,
+    "sender": "你的账号@163.com",
+    "auth_code": "16位授权码",
+    "receiver": "接收邮箱@163.com"
+  }
+}
+```
+
+> 想用其它邮箱？改 `smtp_host`/`smtp_port` 即可（如 QQ 邮箱 `smtp.qq.com:465`，同样用授权码而非登录密码）。
+
+### 第 3 步：测试推送
+
+```bash
+# 用已生成的样例报告试推一次（不联网、秒级）
+python run_daily.py --only-report --notify --date 2026-07-24
+
+# 或完整跑一遍并推送
+python run_daily.py --notify
+```
+
+推送结果会在终端逐渠道打印 `[(渠道, (成功, 信息))]`，便于排查。
+
+### 环境变量覆盖（可选）
+
+不想写文件时，也可用环境变量驱动（CI 场景最常用）：
+
+| 变量 | 含义 |
+|---|---|
+| `NOTIFY_WX_PROVIDER` | `serverchan` 或 `pushplus` |
+| `NOTIFY_WX_KEY` | Server酱 SendKey |
+| `NOTIFY_WX_TOKEN` | PushPlus token |
+| `NOTIFY_MAIL_SENDER` | 发件 163 邮箱 |
+| `NOTIFY_MAIL_AUTH` | 163 授权码 |
+| `NOTIFY_MAIL_RECEIVER` | 收件邮箱（默认同 sender） |
+| `NOTIFY_MAIL_HOST` / `NOTIFY_MAIL_PORT` | SMTP 主机 / 端口（默认 `smtp.163.com` / `465`） |
+
+### 常见问题
+
+- **微信收不到**：检查 `provider` 拼写、key/token 是否复制完整、是否已**关注对应公众号**。
+- **邮件 535 认证失败**：授权码错误或 SMTP 未开启，重做第 2 步 C。
+- **邮件被拒收**：163 对外发信偶有频率/内容限制；可改用 QQ 邮箱或精简内容后重试。
+- **没配置任何渠道**：打印「未配置任何推送渠道」并跳过，**不影响报告生成**。
 
 ---
 
 ## 定时执行
 
 ### 本机定时（推荐，数据最完整）
-直接用操作系统定时任务指向 `run_daily.py --notify` 即可（Windows 任务计划程序 / macOS `launchd` / Linux `cron`）。
 
-### GitHub Actions（见 `.github/workflows/daily.yml`）
-已内置工作日 18:00（北京时间）定时 + 手动触发。它会安装依赖、执行全流程、把生成的 HTML 作为 **Actions 产物** 上传，并提交回仓库 `output/`。
+用操作系统定时任务指向 `run_daily.py --notify` 即可：
 
-⚠️ **GitHub Runner 可行性说明**：GitHub 的 Runner 在海外，通常能访问公网 HTTP（东方财富 / 同花顺 / 新浪 / 腾讯 均可用），但 **通达信 TCP(7709) 很可能不可达**，导致「全市场广度 / 北交所」部分缺失。届时龙虎榜 + 题材 + 行业（均为 HTTP 源）仍可正常生成，仅全市场宽度统计不完整。**如需完整报告，请在能直连通达信的本机运行。**
+- **Windows 任务计划程序**：触发器设「每工作日 17:30」，操作 `python run_daily.py --notify`（建议填写 `run_daily.bat` 绝对路径）。
+- **macOS `launchd` / Linux `cron`**：`30 17 * * 1-5 python /path/to/run_daily.py --notify`。
+
+> 本机运行能直连通达信 TCP(7709)，可拉全市场行情 + 北交所，报告最完整。
+
+### GitHub Actions 工作流接入配置
+
+仓库已内置 `.github/workflows/daily.yml`，可全自动在云端生成并回传报告。
+
+#### 1. 启用工作流
+
+- **公开仓库**：默认已启用，无需额外操作。
+- **私有仓库**：`Settings → Actions → General → Allow all actions and reusable workflows` 开启。
+
+#### 2. 权限说明（无需配 Secret）
+
+工作流使用 GitHub 自带的 `GITHUB_TOKEN`，已在文件头声明：
+
+```yaml
+permissions:
+  contents: write   # 用于将生成的 HTML 提交回仓库
+```
+
+无需你创建任何 Personal Access Token。
+
+#### 3. 触发方式
+
+- **定时触发**：`cron: '0 10 * * 1-5'`。GitHub 定时任务使用 **UTC**，换算：
+  `10:00 UTC = 18:00 北京时间`（中国不实行夏令时，全年固定）。
+  即每周一~周五 18:00（北京时间）自动跑——A 股 15:00 收盘后留有充分数据延迟。
+  *想改时间？北京时间 = UTC + 8。例如 17:30 北京 → `30 9 * * 1-5`。*
+- **手动触发**：仓库 `Actions` 标签页 → 选「每日A股情绪日报」→ 右上角 **Run workflow**。
+
+#### 4. 运行结果去哪看
+
+- **Artifacts**：每次运行在 Artifacts 区上传 `output/*.html`，可直接下载查看。
+- **提交回仓库**：成功后用 `GITHUB_TOKEN` 自动 `git commit` + `push` 到 `main`（commit 信息 `chore: 自动生成日报 <日期>`）。
+
+#### 5.（可选）让 CI 也推送微信 / 邮件
+
+默认 CI 不带 `notify_config.json`（被 `.gitignore` 忽略），且工作流未加 `--notify`。
+若想在云端也推送，用 **GitHub Secrets** 注入环境变量：
+
+1. `Settings → Secrets and variables → Actions → New repository secret`，逐条添加：
+   - `NOTIFY_WX_PROVIDER`（值如 `serverchan` 或 `pushplus`）
+   - `NOTIFY_WX_KEY`（Server酱 key；用 PushPlus 则留空）
+   - `NOTIFY_WX_TOKEN`（PushPlus token；用 Server酱 则留空）
+   - `NOTIFY_MAIL_SENDER` / `NOTIFY_MAIL_AUTH`（163 邮箱 + 授权码）
+   - `NOTIFY_MAIL_RECEIVER`（收件邮箱）
+2. 把 `daily.yml` 的「生成日报」步骤改为：
+
+```yaml
+      - name: 生成日报（含推送）
+        env:
+          NOTIFY_WX_PROVIDER: ${{ secrets.NOTIFY_WX_PROVIDER }}
+          NOTIFY_WX_KEY: ${{ secrets.NOTIFY_WX_KEY }}
+          NOTIFY_WX_TOKEN: ${{ secrets.NOTIFY_WX_TOKEN }}
+          NOTIFY_MAIL_SENDER: ${{ secrets.NOTIFY_MAIL_SENDER }}
+          NOTIFY_MAIL_AUTH: ${{ secrets.NOTIFY_MAIL_AUTH }}
+          NOTIFY_MAIL_RECEIVER: ${{ secrets.NOTIFY_MAIL_RECEIVER }}
+        run: python run_daily.py --notify
+```
+
+#### 6. ⚠️ GitHub Runner 可行性说明
+
+GitHub Runner 在**海外**，通常能访问公网 HTTP（东方财富 / 同花顺 / 新浪 / 腾讯 均可用），但 **通达信 TCP(7709) 很可能不可达**，导致「全市场广度 / 北交所」部分缺失。届时：
+
+- ✅ 龙虎榜 + 题材 + 行业（均为 HTTP 源）仍可正常生成；
+- ⚠️ 全市场宽度统计 / 北交所补齐可能缺失，报告顶部概览的股票数会偏少。
+
+**如需完整报告，请在能直连通达信的本机运行定时任务**（见上「本机定时」）。CI 更适合作为「轻量备份 / 多设备查看」通道。
 
 ---
 
