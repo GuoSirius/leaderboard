@@ -78,6 +78,21 @@ def latest_series_date():
         return None
 
 
+def _date_in_series(date):
+    """目标日是否已存在于行情序列中（决定能否用它做板块校验基准）。"""
+    p = os.path.join(DATA, "series.json")
+    if not os.path.exists(p):
+        return False
+    try:
+        d = json.load(open(p, encoding="utf-8")).get("series", {})
+        for v in list(d.values())[:300]:
+            if date in v.get("d", []):
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser(description="A股每日市场情绪日报生成器")
     ap.add_argument("--date", help="交易日 YYYY-MM-DD，缺省=最近交易日")
@@ -111,8 +126,13 @@ def main():
             run("fetch_bj.py", env_extra={"REPORT_DATE": date},
                 label="④ 北交所补齐(新浪)")
 
-    # 板块计算需要 VERIFY_DATE（校验基准日，取序列里最新交易日）
-    verify = latest_series_date() or "2026-08-07"
+    # 板块计算需要 VERIFY_DATE（校验基准日）。
+    # 必须与报告目标日一致，否则会拿 A 日的自算值去比 B 日的官方涨幅，
+    # 校验误差失真（盘中跑尤其明显）。目标日不在序列里时才回退到最新交易日。
+    series_latest = latest_series_date()
+    verify = date if _date_in_series(date) else (series_latest or date)
+    if verify != date:
+        log(f"* 注意：{date} 不在行情序列中，板块校验基准回退到 {verify}")
     env = {"REPORT_DATE": date, "VERIFY_DATE": verify}
 
     ok_b = run("compute_boards.py", env_extra=env, label="⑤ 行业板块计算(等权还原)")
