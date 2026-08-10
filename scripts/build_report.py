@@ -58,6 +58,9 @@ def svg_diverging(items, width=1180, row_h=26, pad_l=112, pad_r=96,
                   val_key="value", sub_key=None, unit=""):
     """双向横条(0 为中轴, 正红负绿)。items: [{label, value, sub}]"""
     n = len(items)
+    if not n:
+        return ('<div class="note" style="text-align:center;padding:22px 0">'
+                '暂无数据（当日榜单为空或尚未发布）</div>')
     h = n * row_h + 34
     inner = width - pad_l - pad_r
     vmax = max(abs(i[val_key]) for i in items) or 1
@@ -100,6 +103,9 @@ def svg_diverging(items, width=1180, row_h=26, pad_l=112, pad_r=96,
 def svg_bars(items, width=1180, row_h=27, pad_l=132, pad_r=150):
     """单向横条(题材热度)。items: [{label, value, sub, chg}]"""
     n = len(items)
+    if not n:
+        return ('<div class="note" style="text-align:center;padding:22px 0">'
+                '暂无数据</div>')
     h = n * row_h + 30
     inner = width - pad_l - pad_r
     vmax = max(i["value"] for i in items) or 1

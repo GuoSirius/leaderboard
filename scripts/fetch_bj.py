@@ -8,9 +8,9 @@ import json, sys, io, time, random, os
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 import requests
 
-BASE = 'D:/workspace/workbuddy/2026-08-10-08-24-44'
+BASE = os.path.join(os.path.dirname(__file__), "..")  # 仓库根目录（跨平台）
 TARGET = os.environ.get("REPORT_DATE", "2026-07-24")
-OUT = f'{BASE}/data/bj_fill_20260724.json'
+OUT = os.path.join(BASE, "data", f'bj_fill_{TARGET.replace("-", "")}.json')
 UA = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                     '(KHTML, like Gecko) Chrome/120.0 Safari/537.36',
       'Referer': 'https://finance.sina.com.cn/'}
@@ -46,7 +46,7 @@ def fetch(sess, code, tries=3):
 
 
 def main():
-    si = json.load(open(f'{BASE}/data/stock_industry.json', encoding='utf-8'))['map']
+    si = json.load(open(os.path.join(BASE, "data", "stock_industry.json"), encoding='utf-8'))['map']
     done = {}
     if os.path.exists(OUT):
         done = json.load(open(OUT, encoding='utf-8')).get('stocks', {})

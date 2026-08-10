@@ -186,7 +186,7 @@ def main():
                    "src": {"mootdx": n_mo, "sina": n_si, "bj": n_bj},
                    "stocks": day},
                   f, ensure_ascii=False)
-    print("已保存 boards_20260724.json / market_full_20260724.json")
+    print(f"已保存 boards_{TARGET_KEY}.json / market_full_{TARGET_KEY}.json")
 
 
 if __name__ == "__main__":

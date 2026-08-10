@@ -5,11 +5,11 @@ name: 每日A股情绪日报
 #   2) 手动：在 Actions 页面点 "Run workflow"
 on:
   schedule:
-    - cron: '0 10 * * 1-5'
+    - cron: "0 10 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
-  contents: write   # 用于将生成的 HTML 提交回仓库
+  contents: write # 用于将生成的 HTML 提交回仓库
 
 concurrency:
   group: daily-report
@@ -28,7 +28,7 @@ jobs:
       - name: 配置 Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: 安装依赖
         run: pip install -r requirements.txt
@@ -39,7 +39,7 @@ jobs:
         # GitHub Runner 通常能访问公网 HTTP，但「通达信 TCP」在海外 Runner
         # 上可能不可达；若全市场广度/北交所部分缺失，龙虎榜+题材+行业
         # （均为 HTTP 源）仍会正常生成。如需完整报告请在本地运行。
-        run: python run_daily.py
+        run: python run_daily.py --notify
 
       - name: 上传 HTML 产物
         if: always()

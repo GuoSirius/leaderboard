@@ -36,7 +36,8 @@ def main():
     m_lu = sum(1 for c in chgs if c >= 9.8)
     m_ld = sum(1 for c in chgs if c <= -9.8)
 
-    top_theme, top_board = themes[0], brows[0]
+    top_theme = themes[0] if themes else {"tag": "—", "count": 0, "avg_chg": 0.0}
+    top_board = brows[0] if brows else {"name": "—", "chg": 0.0, "leader_name": "—"}
     b_up = sum(1 for r in brows if r["chg"] > 0)
 
     P = []
