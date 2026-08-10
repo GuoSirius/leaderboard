@@ -1,0 +1,14 @@
+{
+  "wechat": {
+    "provider": "serverchan",
+    "key": "在此填写Server酱SendKey(https://sct.ftqq.com 微信扫码获取)",
+    "token": "若用PushPlus则填这里(https://www.pushplus.plus 微信扫码获取)"
+  },
+  "email": {
+    "smtp_host": "smtp.163.com",
+    "smtp_port": 465,
+    "sender": "你的账号@163.com",
+    "auth_code": "163邮箱设置里生成的授权码(非登录密码)",
+    "receiver": "接收邮箱@163.com"
+  }
+}

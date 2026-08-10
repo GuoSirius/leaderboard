@@ -1,0 +1,28 @@
+# ── 运行时生成（执行时自动拉取/生成，不入库）──
+data/
+output/
+
+# ── 密钥 / 本地配置 ──
+notify_config.json
+.env
+*.token
+
+# ── Python ──
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# ── 调试 / 一次性脚本（非流水线必需，仅本地留存）──
+scripts/probe*.py
+scripts/fetch_sina_missing*.py
+scripts/fetch_verify_snapshot.py
+scripts/em_common.py
+scripts/fetch_mootdx_market.py
+
+# ── 工具内部目录 ──
+.workbuddy/
+
+# ── 系统 ──
+.DS_Store
+Thumbs.db
