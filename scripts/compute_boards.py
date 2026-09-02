@@ -14,7 +14,21 @@ BASE = os.path.join(os.path.dirname(__file__), "..")
 D = lambda n: os.path.join(BASE, "data", n)
 TARGET = os.environ.get("REPORT_DATE", "2026-07-24")
 TARGET_KEY = TARGET.replace("-", "")
-VERIFY_DAY = os.environ.get("VERIFY_DATE", "2026-08-07")
+
+
+def _meta_day():
+    """参考库 boards.json 官方板块涨幅对应的交易日（抓取当天）。
+    东财板块历史K线被封禁，本地只有这一份官方锚点，校验必须锚定到它，
+    否则会拿 A 日的自算值去比 B 日的官方涨幅，产生跨日错位假误差。"""
+    try:
+        m = json.load(open(D("boards_meta.json"), encoding="utf-8"))
+        return m.get("day")
+    except Exception:
+        return None
+
+
+# 优先级：显式 VERIFY_DATE 环境变量 > 参考库官方锚点日 > 兜底
+VERIFY_DAY = os.environ.get("VERIFY_DATE") or _meta_day() or "2026-08-07"
 
 
 def load(n):

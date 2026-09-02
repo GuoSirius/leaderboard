@@ -2,7 +2,7 @@
 """用 push2delay 抓取：(a) 东财行业板块列表 (b) 全市场个股所属行业映射。
 保守限流，避免触发东财风控。
 """
-import sys, io, json, os, time, random
+import sys, io, json, os, time, random, datetime
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 import requests
 
@@ -79,6 +79,19 @@ print(f"  行业板块合计: {len(board_rows)} 个 (接口 total={btotal})", fl
 with open(os.path.join(DATA_DIR, "boards.json"), "w", encoding="utf-8") as f:
     json.dump({"count": len(board_rows), "boards": board_rows},
               f, ensure_ascii=False)
+
+# 记录官方板块涨幅对应的交易日，供 compute_boards 校验对齐使用
+# （东财板块历史K线被风控封禁，本地只有"抓取当天"这一份官方锚点，
+#  校验必须拿同一天的自算值去比，否则会出现跨日错位假误差）
+def _last_trading_day(d=None):
+    d = d or datetime.date.today()
+    while d.weekday() >= 5:  # 5=周六 6=周日
+        d -= datetime.timedelta(days=1)
+    return d.strftime("%Y-%m-%d")
+meta = {"day": _last_trading_day(),
+        "fetched_at": datetime.datetime.now().isoformat(timespec="seconds")}
+with open(os.path.join(DATA_DIR, "boards_meta.json"), "w", encoding="utf-8") as f:
+    json.dump(meta, f, ensure_ascii=False)
 
 # ── (b) 全市场个股所属行业 ──
 print("\n(b) 抓取全市场个股所属行业 (f100)", flush=True)

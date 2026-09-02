@@ -93,6 +93,17 @@ def _date_in_series(date):
         return False
 
 
+def board_day_from_meta():
+    """参考库 boards.json 官方板块涨幅对应的交易日（抓取当天）。
+    东财板块历史K线被风控封禁，本地只有这一份官方锚点，板块校验
+    必须锚定到它，不能拿目标日去比（否则跨日错位产生假误差）。"""
+    p = os.path.join(DATA, "boards_meta.json")
+    try:
+        return json.load(open(p, encoding="utf-8")).get("day")
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser(description="A股每日市场情绪日报生成器")
     ap.add_argument("--date", help="交易日 YYYY-MM-DD，缺省=最近交易日")
@@ -126,13 +137,18 @@ def main():
             run("fetch_bj.py", env_extra={"REPORT_DATE": date},
                 label="④ 北交所补齐(新浪)")
 
-    # 板块计算需要 VERIFY_DATE（校验基准日）。
-    # 必须与报告目标日一致，否则会拿 A 日的自算值去比 B 日的官方涨幅，
-    # 校验误差失真（盘中跑尤其明显）。目标日不在序列里时才回退到最新交易日。
+    # 板块校验基准日必须锚定到"参考库官方涨幅对应的交易日"（boards_meta.json），
+    # 不能拿目标日去比——否则拿 A 日的自算值比 B 日的官方涨幅，校验误差失真。
+    # 目标日的板块涨跌幅仍按等权还原独立计算（算法已对齐东财口径），不受此影响。
     series_latest = latest_series_date()
-    verify = date if _date_in_series(date) else (series_latest or date)
-    if verify != date:
-        log(f"* 注意：{date} 不在行情序列中，板块校验基准回退到 {verify}")
+    meta_day = board_day_from_meta()
+    verify = meta_day or (date if _date_in_series(date) else (series_latest or date))
+    if meta_day:
+        if meta_day != date:
+            log(f"* 板块校验基准 = 参考库官方锚点日 {meta_day}（boards.json 抓取日）；"
+                f"目标日 {date} 的板块涨跌幅按同口径独立还原")
+    elif verify != date:
+        log(f"* 注意：未找到参考库锚点日且 {date} 不在行情序列，板块校验基准回退到 {verify}")
     env = {"REPORT_DATE": date, "VERIFY_DATE": verify}
 
     ok_b = run("compute_boards.py", env_extra=env, label="⑤ 行业板块计算(等权还原)")
